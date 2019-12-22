@@ -7,12 +7,14 @@ const failedTweet = 2;
 const shouldFail = id => id === failedTweet;
 
 const initialState = {
-  tweets: [0, 3].map((likes, i) => ({
-    id: i + 1,
+  tweets: [0, 3].map((likes, idx) => ({
+    id: idx + 1,
     likes,
     username: "Rajat S",
     content: `${
-      shouldFail(i + 1) ? "Peter Parker is Spiderman" : "Bruce Wayne is Batman"
+      shouldFail(idx + 1)
+        ? "Peter Parker is Spiderman"
+        : "Bruce Wayne is Batman"
     }`
   })),
   likedTweets: [2]
@@ -41,27 +43,41 @@ const App = () => {
   const [likedTweets, setLikedTweets] = React.useState(
     initialState.likedTweets
   );
+  const [likeRequestPending, setLikeRequestPending] = React.useState(false);
+
+  const setTweetLiked = (tweetId, isLiked) => {
+    setTweets(prevTweets =>
+      prevTweets.map(tweet =>
+        tweetId === tweet.id
+          ? {
+              ...tweet,
+              likes: tweet.likes + (isLiked ? -1 : 1)
+            }
+          : tweet
+      )
+    );
+
+    setLikedTweets(prevLikedTweets =>
+      isLiked
+        ? prevLikedTweets.filter(id => id !== tweetId)
+        : [...prevLikedTweets, tweetId]
+    );
+  };
 
   const onClickLike = tweetId => {
     console.log(`Clicked like: ${tweetId}`);
+
+    if (likeRequestPending) {
+      console.log("return ");
+      return;
+    }
 
     console.log(`Update state: ${tweetId}`);
 
     const isLiked = likedTweets.includes(tweetId);
 
-    setTweets(
-      tweets.map(tweet =>
-        tweetId === tweet.id
-          ? { ...tweet, likes: tweet.likes + (isLiked ? -1 : 1) }
-          : tweet
-      )
-    );
-
-    setLikedTweets(
-      isLiked
-        ? likedTweets.filter(id => id !== tweetId)
-        : [...likedTweets, tweetId]
-    );
+    setLikeRequestPending(true);
+    setTweetLiked(tweetId, isLiked);
 
     likeTweetRequest(tweetId, true)
       .then(() => {
@@ -69,6 +85,11 @@ const App = () => {
       })
       .catch(() => {
         console.error(`catch: ${tweetId}`);
+        setTweetLiked(tweetId, !isLiked);
+      })
+      .then(() => {
+        console.log(likeRequestPending);
+        setLikeRequestPending(false);
       });
   };
 
